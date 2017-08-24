@@ -3,64 +3,48 @@ package org.qydata.main;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
-import org.qydata.po.ApiCost;
-import org.qydata.tools.CalendarAssistTool;
+import org.qydata.po.Api;
+import org.qydata.tools.SendEmail;
 
 import java.io.InputStream;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Created by jonhn on 2017/4/19.
  */
 public class Entrance {
 
+    private static String [] to  = {"laoluo@qianyandata.com","zhangjianhong@qianyandata.com"};
+    //private static String [] to  = {"zhangjianhong@qianyandata.com"};
     public static void main(String[] args) {
 
         String resource = "mybatis.xml";
         InputStream is = Entrance.class.getClassLoader().getResourceAsStream(resource);
         SqlSessionFactory sessionFactory = new SqlSessionFactoryBuilder().build(is);
         SqlSession session = sessionFactory.openSession();
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
-            Map<String,Object> mapDelete = new HashMap<>();
-            mapDelete.put("years", CalendarAssistTool.getCurrentYear());
-            mapDelete.put("months",CalendarAssistTool.getCurrentMonth());
-            mapDelete.put("days",CalendarAssistTool.getCurrentDay());
-            String statementDelete = "org.qydata.mapper.ApiCostMapper.deleteApiConsume";
-            int flag = session.delete(statementDelete,mapDelete);
-            session.commit();
-            String statementSelect = "org.qydata.mapper.ApiCostMapper.queryApiConsume";
-            Map<String, Object> mapSelect = new HashMap<>();
-            List<ApiCost> apiCostList = session.selectList(statementSelect, mapSelect);
-            List<ApiCost> apiCosts = new ArrayList<>();
-            if (apiCostList != null && apiCostList.size() >0){
-                for (int i = 0; i < apiCostList.size(); i++) {
-                    ApiCost apiCostResult = apiCostList.get(i);
-                    ApiCost apiCost = new ApiCost();
-                    apiCost.setApiId(apiCostResult.getApiId());
-                    apiCost.setYears(apiCostResult.getYears());
-                    apiCost.setMonths(apiCostResult.getMonths());
-                    apiCost.setDays(apiCostResult.getDays());
-                    apiCost.setTotleCost(apiCostResult.getTotleCost());
-                    apiCost.setUsageAmount(apiCostResult.getUsageAmount());
-                    apiCost.setFeeAmount(apiCostResult.getFeeAmount());
-                    apiCost.setConsuTime(sdf.parse(apiCostResult.getYears()+"/"+apiCostResult.getMonths()+"/"+apiCostResult.getDays()));
-                    apiCosts.add(apiCost);
+
+        String queryApiStatus = "org.qydata.mapper.ApiBanMapper.queryApiStatus";
+        List<Api> apiList =  session.selectList(queryApiStatus);
+        if (apiList != null && apiList.size() > 0){
+            for (int i = 0; i < apiList.size() ; i++) {
+                Api api = apiList.get(i);
+                if (api != null){
+                    if (api.getApiTypeName() != null){
+                        if (api.getVendorName() != null){
+                            api.setApiTypeName(api.getApiTypeName() + "@" + api.getVendorName());
+                        }
+                    }
+                    String apiName = api.getApiTypeName();
+                    String title = apiName + "被系统禁用提醒";
+                    String content = apiName +"已被系统自动禁用，禁用时间："+ api.getTimeStamp();
+                    try {
+                        SendEmail.sendMail(to,title,content);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
-                //执行增加操作
-                String statementInsert = "org.qydata.mapper.ApiCostMapper.insertApiConsume";
-                int result = session.insert(statementInsert, apiCosts);
-                //增删改操作一定要提交事务
-                session.commit();
             }
-        }catch (Exception e){
-            e.printStackTrace();
-        }finally{
-            session.close();
         }
+        session.close();
     }
 }

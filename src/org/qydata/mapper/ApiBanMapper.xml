@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.qydata.mapper.ApiBanMapper">
+
+    <resultMap id="apiMap" type="org.qydata.po.Api">
+        <result column="id" property="id"/>
+        <result column="apiTypeId" property="apiTypeId"/>
+        <result column="vendorId" property="vendorId"/>
+        <result column="timestamp" property="timeStamp"/>
+        <result column="apiTypeName" property="apiTypeName"/>
+        <result column="vendorName" property="vendorName"/>
+    </resultMap>
+
+    <select id="queryApiStatus" resultMap="apiMap">
+        SELECT a.id,a.apiTypeId,a.vendorId,a.timestamp,b.name apiTypeName,c.name vendorName
+        FROM qydata.Api a
+        LEFT JOIN qyfinance.bkvwApiType b ON a.apiTypeId = b.id
+        LEFT JOIN qyfinance.finance_ApiVendor c ON a.vendorId = c.id
+        WHERE a.status = -2
+    </select>
+
+</mapper>
